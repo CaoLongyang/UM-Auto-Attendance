@@ -1,6 +1,6 @@
 # 🚀 UM Auto Attendance Manager (马来亚大学全自动签到神器)
 
-👉 **[🌍 Click here for English Version](README_EN.md)**
+👉 **[🌍 Click here for English Version](README.md)**
 
 这是一个为马大学生准备的自动化辅助工具。它可以帮你准时、全自动地在 Spectrum 上完成签到，让你不用再担心因为忙碌或打游戏而错过 Attendance。
 
@@ -10,8 +10,9 @@
 如果你不喜欢折腾代码环境，只想直接双击运行软件，请看这里：
 
 ### 1. 专门的下载位置
-👉 **[点击这里下载最新版 EXE 压缩包]** *(注：以后这里会放你的 Release 链接)*
-或者，你也可以在当前页面的右侧，找到 **"Releases"** 标签下载 `Auto_Attendance.zip`。
+[![Download v1.0](https://img.shields.io/badge/Download-Attendance_v1.0-blue?style=for-the-badge&logo=github)](https://github.com/CaoLongyang/Auto_Attendance/releases/latest/download/attendance.zip)
+
+> **提示**：如果点击上方按钮没反应，请前往 [Releases 页面](https://github.com/CaoLongyang/UM-Auto-Attendance/releases/latest) 手动下载。或者，你也可以在当前页面的右侧，找到 **"Releases"** 标签下载 `Auto_Attendance.zip`。
 
 ### 2. 如何使用
 1. **解压文件**：下载后，**必须**右键点击压缩包，选择“解压到当前文件夹”。（⚠️千万不要在压缩包里直接双击运行！）
@@ -20,6 +21,12 @@
 4. **添加课表**：填入你的上课时间、课程名和具体的 Spectrum 签到网址，点击 `➕ Add to Schedule`。
 5. **一键挂机**：点击最下方的 `🚀 Save & Launch`。你可以把软件最小化，到了时间它会自动帮你点击 Present 并保存日志！
 
+#### 如何找到 Spectrum 签到的 **URL**？
+1. **进入课程**：在 Spectrum 找到对应课程。
+2. **点击 Attendance**：点击那个带有“小人”图标的 Attendance 链接。
+3. **复制地址**：进入显示日期列表的页面后，直接复制浏览器地址栏网址。
+
+特征：链接必须包含 mod/attendance 字样。
 ---
 
 ## 💻 选项二：我是开发者（代码环境部署教程）
@@ -56,3 +63,5 @@ python gui.py
 遇到动态密码墙：如果老师临时设置了签到密码，程序会自动暂停并在屏幕正中间弹出红色报警框，提醒你立刻手动干预！
 
 不要乱删文件：软件生成的 config.json 和 bot_profile 是你的课表和登录缓存，删除了就需要重新配置。
+
+页面留存：签到完成后，浏览器会一直保持开启直到你手动关闭，方便你随时确认是否真的勾选成功。
