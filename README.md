@@ -13,7 +13,7 @@ If you don't want to mess with coding environments and just want to run the soft
 ### 1. Download the App
 [![Download v1.0](https://img.shields.io/badge/Download-Attendance_v1.0-blue?style=for-the-badge&logo=github)](https://github.com/CaoLongyang/Auto_Attendance/releases/latest/download/attendance.zip)
 
-**Note**: If the button above doesn't work, please go to the [Releases Page]([https://github.com/CaoLongyang/UM-Auto_Attendance/releases/latest](https://github.com/CaoLongyang/UM-Auto-Attendance/releases)) and download manually.
+**Note**: If the button above doesn't work, please go to the [Releases Page](https://github.com/CaoLongyang/UM-Auto-Attendance/releases) and download manually.
 Alternatively, find the `Auto_Attendance.zip` under the **"Releases"** section on the right side of this page.
 
 ### 2. How to Use
