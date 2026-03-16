@@ -10,7 +10,10 @@ This is an automated assistant tool exclusively designed for University of Malay
 If you don't want to mess with coding environments and just want to run the software directly, follow these steps:
 
 ### 1. Dedicated Download Location
-👉 **[Click here to download the latest EXE package]** *(Note: Replace this with your Release link later)*
+### 1. Download the App
+[![Download v1.0](https://img.shields.io/badge/Download-Attendance_v1.0-blue?style=for-the-badge&logo=github)](https://github.com/CaoLongyang/Auto_Attendance/releases/latest/download/attendance.zip)
+
+**Note**: If the button above doesn't work, please go to the [Releases Page](https://github.com/CaoLongyang/Auto_Attendance/releases/latest) and download manually.
 Alternatively, find the `Auto_Attendance.zip` under the **"Releases"** section on the right side of this page.
 
 ### 2. How to Use
@@ -18,7 +21,8 @@ Alternatively, find the `Auto_Attendance.zip` under the **"Releases"** section o
 2. **Launch**: Open the extracted folder and double-click `gui.exe`.
 3. **First-time Login**: Click the `🔑 Log In Spectrum` button. Log in to your UM account manually in the pop-up browser, then close it. *(A `bot_profile` folder will be created to store your session; do not delete it!)*
 4. **Add Schedule**: Enter your class day, start/end time, course name, and the specific Spectrum attendance URL, then click `➕ Add to Schedule`.
-5. **One-click Standby**: Click the blue `🚀 Save & Launch` button. You can minimize the app; it will automatically click "Present" and save logs when the time comes!
+5. 
+6. **One-click Standby**: Click the blue `🚀 Save & Launch` button. You can minimize the app; it will automatically click "Present" and save logs when the time comes!
 
 ---
 
