@@ -1,6 +1,6 @@
 # 🚀 UM Auto Attendance Manager (University of Malaya)
 
-👉 **[🌏 点击这里查看中文版说明书](README_CN.md)**
+👉 **[🌏 点击这里查看中文版说明书](readme_CN.md)**
 
 This is an automated assistant tool exclusively designed for University of Malaya (UM) students. It helps you complete your attendance sign-in on Spectrum automatically and punctually, ensuring you never miss a check-in while you are busy.
 
