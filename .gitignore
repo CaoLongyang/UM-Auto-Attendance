@@ -216,3 +216,12 @@ config.json
 dist/
 build/
 *.exe
+
+# ---- UM Auto Attendance: local secrets & runtime ----
+token.txt
+token.text
+cookies.json
+signed.json
+logs/
+tmp/
+*.log
