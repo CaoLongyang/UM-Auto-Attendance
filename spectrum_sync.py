@@ -39,6 +39,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from i18n import t
+
 DEFAULT_SITE = "https://spectrum.um.edu.my"
 DAY_LABELS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 TOKEN_FILENAMES = ("token.txt", "token.text")
@@ -69,7 +71,8 @@ def parse_token_file(path) -> tuple[str, str]:
     """读 token.txt：一行是 token，两行是（站点, token）。"""
     lines = [ln.strip() for ln in Path(path).read_text(encoding="utf-8").splitlines() if ln.strip()]
     if not lines:
-        raise TokenMissing(f"{Path(path).name} 是空的。")
+        raise TokenMissing(t(f"{Path(path).name} 是空的。",
+                             f"{Path(path).name} is empty."))
     if len(lines) == 1:
         return DEFAULT_SITE, lines[0]
     return lines[0].rstrip("/"), lines[1]
@@ -166,7 +169,7 @@ class SpectrumClient:
 
     def __init__(self, token: str, site: str = DEFAULT_SITE, timeout: int = 30):
         if not token:
-            raise TokenMissing("缺少 token。")
+            raise TokenMissing(t("缺少 token。", "No token provided."))
         self.token = token.strip()
         self.site = (site or DEFAULT_SITE).rstrip("/")
         self.timeout = timeout
@@ -185,22 +188,28 @@ class SpectrumClient:
             with urlopen(request, timeout=self.timeout) as response:
                 raw = response.read().decode("utf-8", "replace")
         except HTTPError as exc:
-            raise SpectrumError(f"Spectrum 返回 HTTP {exc.code}，请稍后再试。") from exc
+            raise SpectrumError(t(f"Spectrum 返回 HTTP {exc.code}，请稍后再试。",
+                                  f"Spectrum returned HTTP {exc.code}, try again later.")) from exc
         except (URLError, OSError) as exc:
-            raise SpectrumError(f"连不上 {self.site}（网络问题？）：{exc}") from exc
+            raise SpectrumError(t(f"连不上 {self.site}（网络问题？）：{exc}",
+                                  f"Cannot reach {self.site} (network problem?): {exc}")) from exc
 
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise SpectrumError("Spectrum 返回的不是 JSON，可能是维护页或登录页。") from exc
+            raise SpectrumError(t("Spectrum 返回的不是 JSON，可能是维护页或登录页。",
+                                  "Spectrum did not return JSON — probably a maintenance or "
+                                  "login page.")) from exc
 
         if isinstance(data, dict) and data.get("exception"):
             code = str(data.get("errorcode") or "")
             message = data.get("message") or data["exception"]
             if code in {"invalidtoken", "accessexception", "invalidtokenid"}:
-                raise SpectrumError("token 无效或已被吊销，请到 Spectrum 重新生成一个。")
+                raise SpectrumError(t("token 无效或已被吊销，请到 Spectrum 重新生成一个。",
+                                      "Token is invalid or revoked — create a new one on Spectrum."))
             if code == "webservicesnotenabled":
-                raise SpectrumError("站点没有开放 Web Services。")
+                raise SpectrumError(t("站点没有开放 Web Services。",
+                                      "Web services are not enabled on this site."))
             raise SpectrumError(f"{function}: {message}")
         return data
 
@@ -359,10 +368,12 @@ def sync(
 
     client = SpectrumClient(token or "", site or DEFAULT_SITE)
     info = client.site_info()
-    log(f"已连接 {client.site}，账号 {info.get('username', '?')}")
+    log(t(f"已连接 {client.site}，账号 {info.get('username', '?')}",
+          f"Connected to {client.site} as {info.get('username', '?')}"))
 
     courses = client.my_courses()
-    log(f"共 {len(courses)} 门课，正在读取 Attendance 活动…")
+    log(t(f"共 {len(courses)} 门课，正在读取 Attendance 活动…",
+          f"{len(courses)} courses found, reading attendance activities…"))
 
     modules: dict[int, dict] = {}
     errors: list[str] = []
@@ -381,15 +392,20 @@ def sync(
             module["courseid"] = course["id"]
             module["group_numbers"] = groups
             modules[module["cmid"]] = module
-        group_text = f"，我的组 {sorted(groups)}" if groups else ""
-        log(f"  [{index}/{len(courses)}] {shortname}: {len(found)} 个考勤活动{group_text}")
+        group_text = t(f"，我的组 {sorted(groups)}",
+                       f", my groups {sorted(groups)}") if groups else ""
+        log(t(f"  [{index}/{len(courses)}] {shortname}: {len(found)} 个考勤活动{group_text}",
+              f"  [{index}/{len(courses)}] {shortname}: {len(found)} activities{group_text}"))
 
     before = len(modules)
     modules, wrong_occ = split_by_occ(modules)
     if wrong_occ:
-        log(f"按组别丢掉 {len(wrong_occ)} 个不是我的 OCC 活动（见下面的清单）")
+        log(t(f"按组别丢掉 {len(wrong_occ)} 个不是我的 OCC 活动（见下面的清单）",
+              f"Dropped {len(wrong_occ)} OCC activities that are not your group "
+              f"(see the list below)"))
 
-    log(f"可见的 Attendance 活动共 {before} 个，保留 {len(modules)} 个，正在读取日历…")
+    log(t(f"可见的 Attendance 活动共 {before} 个，保留 {len(modules)} 个，正在读取日历…",
+          f"{before} visible activities, {len(modules)} kept — reading the calendar…"))
 
     months = month_span(months_back, months_ahead)
     events: list[dict] = []
@@ -409,7 +425,8 @@ def sync(
                     used += 1
             except (TypeError, ValueError):
                 continue
-        log(f"  {year}-{month:02d}: {used} 次考勤 session")
+        log(t(f"  {year}-{month:02d}: {used} 次考勤 session",
+              f"  {year}-{month:02d}: {used} attendance sessions"))
 
     entries, dropped = derive_slots(modules, events)
 
@@ -424,7 +441,8 @@ def sync(
         before = len(entries)
         entries = [entry for entry in entries if entry["url"] not in ignored]
         if before != len(entries):
-            log(f"按你的忽略列表跳过了 {before - len(entries)} 个时段")
+            log(t(f"按你的忽略列表跳过了 {before - len(entries)} 个时段",
+                  f"Skipped {before - len(entries)} slots from your ignore list"))
 
     return {
         "entries": entries,

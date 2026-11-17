@@ -29,6 +29,7 @@ from selenium.webdriver.edge.options import Options
 from selenium.webdriver.edge.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 
+from i18n import t
 from spectrum_sync import app_dir
 
 SITE = "https://spectrum.um.edu.my"
@@ -51,7 +52,7 @@ _variant = 0
 # Edge 升级后偶尔会出现 "tab crashed" / 启动即崩。按顺序试启动参数；
 # 这台机器上 Edge 156 只有「兼容模式」稳定，所以把它放在第一组，其余作为备用。
 LAUNCH_VARIANTS = (
-    ("兼容模式", (
+    (("兼容模式", "compat"), (
         "--disable-gpu",
         "--no-sandbox",
         "--disable-dev-shm-usage",
@@ -59,9 +60,9 @@ LAUNCH_VARIANTS = (
         "--disable-backgrounding-occluded-windows",
         "--disable-renderer-backgrounding",
     )),
-    ("默认", ()),
-    ("禁用 GPU", ("--disable-gpu", "--disable-software-rasterizer")),
-    ("无窗口模式", (
+    (("默认", "default"), ()),
+    (("禁用 GPU", "no GPU"), ("--disable-gpu", "--disable-software-rasterizer")),
+    (("无窗口模式", "headless"), (
         "--headless=new",
         "--disable-gpu",
         "--no-sandbox",
@@ -88,7 +89,8 @@ def _kill_profile_browsers(say=None) -> None:
                        capture_output=True, timeout=20)
     except Exception:
         if say:
-            say("（无法自动结束残留 Edge 进程，请手动关掉）")
+            say(t("（无法自动结束残留 Edge 进程，请手动关掉）",
+                  "(could not close the leftover Edge processes — please close them yourself)"))
 
 
 def _temp_dir() -> str:
@@ -148,7 +150,7 @@ def _advance_variant() -> str:
     """切到下一组启动参数，返回新参数的名字。"""
     global _variant
     _variant = (_variant + 1) % len(LAUNCH_VARIANTS)
-    return LAUNCH_VARIANTS[_variant][0]
+    return t(*LAUNCH_VARIANTS[_variant][0])
 
 
 def _reset_variant() -> None:
@@ -328,10 +330,14 @@ def _find_today_submit(driver, say):
         if exact:
             return exact[0][2], False
         if len(candidates) == 1:
-            say(f"ℹ️ 只找到一个可签到 session（识别日期：{candidates[0][0] or '未知'}），尝试提交。")
+            say(t(f"ℹ️ 只找到一个可签到 session（识别日期：{candidates[0][0] or '未知'}），尝试提交。",
+                  f"ℹ️ Only one signable session found (date: {candidates[0][0] or 'unknown'}) "
+                  f"— trying it."))
             return candidates[0][2], False
         dates = ", ".join(str(item[0]) for item in candidates)
-        say(f"⚠️ 有 {len(candidates)} 个可签到 session（{dates}），都不是今天，跳过以免签错。")
+        say(t(f"⚠️ 有 {len(candidates)} 个可签到 session（{dates}），都不是今天，跳过以免签错。",
+              f"⚠️ {len(candidates)} signable sessions ({dates}) and none is today — "
+              f"skipped to avoid signing the wrong one."))
         return None, False
 
     # 表格结构认不出来时的兜底：页面上只有一个签到链接就直接用；多个就不猜
@@ -341,10 +347,14 @@ def _find_today_submit(driver, say):
     except WebDriverException:
         loose_links = []
     if len(loose_links) == 1:
-        say("ℹ️ 没从表格里认出日期，但页面上只有一个签到链接，直接用它。")
+        say(t("ℹ️ 没从表格里认出日期，但页面上只有一个签到链接，直接用它。",
+              "ℹ️ Could not read a date from the table, but there is only one sign-in "
+              "link — using it."))
         return loose_links[0], False
     if len(loose_links) > 1:
-        say(f"⚠️ 页面上有 {len(loose_links)} 个签到链接，分不清哪个是今天的，跳过以免签错。")
+        say(t(f"⚠️ 页面上有 {len(loose_links)} 个签到链接，分不清哪个是今天的，跳过以免签错。",
+              f"⚠️ {len(loose_links)} sign-in links on the page and none clearly today — "
+              f"skipped to avoid signing the wrong one."))
         return None, False
 
     # 没有任何 Submit attendance：如果今天那一行已经显示 Present / Self-recorded，就算签过了
@@ -367,16 +377,16 @@ def _find_today_submit(driver, say):
 def _run_sign_in(driver, target_url: str, say) -> str:
     """真正的签到流程（浏览器已经就绪）。"""
     if not _ensure_login(driver):
-        say("❌ 等了 90 秒还没登录完成。")
+        say(t("❌ 等了 90 秒还没登录完成。", "❌ Still not logged in after 90 seconds."))
         return LOGIN_TIMEOUT
 
-    say(f"→ 打开签到页面: {target_url}")
+    say(t(f"→ 打开签到页面: {target_url}", f"→ Opening attendance page: {target_url}"))
     driver.get(target_url)
     _wait_body(driver, timeout=30)
 
     # SSO 过期时，Moodle 会把签到页也重定向到登录页
     if "login" in (driver.current_url or "").lower():
-        say("→ 登录已过期，先重新登录…")
+        say(t("→ 登录已过期，先重新登录…", "→ Session expired, logging in again…"))
         if not _ensure_login(driver):
             return LOGIN_TIMEOUT
         driver.get(target_url)
@@ -384,22 +394,25 @@ def _run_sign_in(driver, target_url: str, say) -> str:
 
     text = _body_text(driver)
     if "you must enter the session password" in text or "password required" in text:
-        say("🔒 这个签到需要老师设置的动态密码。")
+        say(t("🔒 这个签到需要老师设置的动态密码。",
+              "🔒 This attendance needs the session password set by the lecturer."))
         return PASSWORD
 
     link, already_signed = _find_today_submit(driver, say)
     if already_signed:
-        say("✅ 今天这一行已经显示 Present / Self-recorded。")
+        say(t("✅ 今天这一行已经显示 Present / Self-recorded。",
+              "✅ Today's row already shows Present / Self-recorded."))
         return OK
     if link is None:
-        say("⚠️ 这个页面现在没有今天可提交的签到（还没开始 / 已结束）。")
+        say(t("⚠️ 这个页面现在没有今天可提交的签到（还没开始 / 已结束）。",
+              "⚠️ Nothing to submit for today on this page (not open yet / already closed)."))
         return NOT_OPEN
 
     try:
         driver.execute_script("arguments[0].scrollIntoView({block:'center'});", link)
         link.click()
     except WebDriverException as exc:
-        say(f"❌ 点不开签到链接：{exc}")
+        say(t(f"❌ 点不开签到链接：{exc}", f"❌ Cannot open the sign-in link: {exc}"))
         return ERROR
 
     time.sleep(1.0)
@@ -407,7 +420,7 @@ def _run_sign_in(driver, target_url: str, say) -> str:
 
     body = _body_text(driver)
     if "you must enter the session password" in body or "password required" in body:
-        say("🔒 需要动态密码。")
+        say(t("🔒 需要动态密码。", "🔒 A session password is required."))
         return PASSWORD
 
     # 选 Present：先点 label，再退回点文字
@@ -417,7 +430,8 @@ def _run_sign_in(driver, target_url: str, say) -> str:
         (By.XPATH, "//span[contains(normalize-space(text()), 'Present')]"),
     ], timeout=10)
     if not selected:
-        say("❌ 找到了签到页，但找不到 Present 选项（页面结构可能变了）。")
+        say(t("❌ 找到了签到页，但找不到 Present 选项（页面结构可能变了）。",
+              "❌ Sign-in page found but no Present option (the page layout may have changed)."))
         return ERROR
 
     time.sleep(0.5)
@@ -427,7 +441,8 @@ def _run_sign_in(driver, target_url: str, say) -> str:
         (By.XPATH, "//button[contains(normalize-space(.), 'Save')]"),
     ], timeout=10)
     if not submitted:
-        say("❌ 勾了 Present，但找不到提交按钮。")
+        say(t("❌ 勾了 Present，但找不到提交按钮。",
+              "❌ Present selected but the submit button is missing."))
         return ERROR
 
     time.sleep(3)
@@ -435,15 +450,16 @@ def _run_sign_in(driver, target_url: str, say) -> str:
     result = _body_text(driver)
 
     if "you must enter the session password" in result or "password required" in result:
-        say("🔒 需要动态密码。")
+        say(t("🔒 需要动态密码。", "🔒 A session password is required."))
         return PASSWORD
     if ("your attendance in this session has been recorded" in result
             or "self-recorded" in result
             or "has been recorded" in result):
-        say("✅ 页面确认签到成功。")
+        say(t("✅ 页面确认签到成功。", "✅ The page confirms your attendance was recorded."))
         return OK
 
-    say("⚠️ 点了提交，但没看到成功提示，稍后重试。")
+    say(t("⚠️ 点了提交，但没看到成功提示，稍后重试。",
+          "⚠️ Submitted but no confirmation appeared — will retry later."))
     return NOT_OPEN
 
 
@@ -460,12 +476,13 @@ def start_sign_in(target_url: str, site: str = SITE, log=None) -> str:
     say = log or print
     with _driver_lock:
         for attempt in range(len(LAUNCH_VARIANTS)):
-            name = LAUNCH_VARIANTS[_variant][0]
-            say(f"→ 浏览器模式：{name}")
+            name = t(*LAUNCH_VARIANTS[_variant][0])
+            say(t(f"→ 浏览器模式：{name}", f"→ Browser mode: {name}"))
             try:
                 driver = get_driver(fresh=(attempt > 0), say=say)
             except RuntimeError as exc:
-                say(f"❌ 启动浏览器失败（{name}）：{exc}")
+                say(t(f"❌ 启动浏览器失败（{name}）：{exc}",
+                      f"❌ Failed to launch the browser ({name}): {exc}"))
                 _advance_variant()
                 continue
 
@@ -474,22 +491,29 @@ def start_sign_in(target_url: str, site: str = SITE, log=None) -> str:
             except WebDriverException as exc:
                 if _is_browser_crash(exc):
                     first_line = str(exc).splitlines()[0][:160]
-                    say(f"⚠️ 浏览器崩溃（{name}）：{first_line}")
+                    say(t(f"⚠️ 浏览器崩溃（{name}）：{first_line}",
+                          f"⚠️ Browser crashed ({name}): {first_line}"))
                     _close_current()
                     if attempt + 1 < len(LAUNCH_VARIANTS):
-                        say(f"   换「{_advance_variant()}」参数再试一次…")
+                        next_name = _advance_variant()
+                        say(t(f"   换「{next_name}」参数再试一次…",
+                              f"   retrying with \"{next_name}\"…"))
                         time.sleep(1.5)
                     continue
-                say(f"❌ 浏览器操作失败：{exc}")
+                say(t(f"❌ 浏览器操作失败：{exc}", f"❌ Browser action failed: {exc}"))
                 _close_current()
                 return ERROR
             except Exception as exc:  # 兜底，别让后台线程死掉
-                say(f"❌ 签到过程出错：{exc}")
+                say(t(f"❌ 签到过程出错：{exc}", f"❌ Sign-in failed: {exc}"))
                 return ERROR
 
-        say("❌ Edge 连续崩溃，所有启动参数都没成功。")
-        say("   建议：把 bot_profile 改名成 bot_profile_old，点 Log In Spectrum 重新登录一次；")
-        say("   如果仍然崩溃，说明是 Edge 本身的问题，可以考虑换 Chrome。")
+        say(t("❌ Edge 连续崩溃，所有启动参数都没成功。",
+              "❌ Edge kept crashing — every launch variant failed."))
+        say(t("   建议：把 bot_profile 改名成 bot_profile_old，点 Log In Spectrum 重新登录一次；",
+              "   Tip: rename bot_profile to bot_profile_old, then click Log In Spectrum "
+              "and sign in again;"))
+        say(t("   如果仍然崩溃，说明是 Edge 本身的问题，可以考虑换 Chrome。",
+              "   If it still crashes, the problem is Edge itself — consider switching to Chrome."))
         _reset_variant()
         return BROWSER_DIED
 
@@ -504,11 +528,14 @@ def manual_login(log=None) -> None:
         try:
             driver = get_driver(fresh=True, say=say)
             driver.get(SITE)
-            say("已在浏览器中打开 Spectrum：请在里面登录，登录成功后这个窗口可以留着，也可以关掉。")
+            say(t("已在浏览器中打开 Spectrum：请在里面登录，登录成功后这个窗口可以留着，也可以关掉。",
+                  "Spectrum is open in the browser — sign in there. You can keep the window "
+                  "or close it once you are logged in."))
         except RuntimeError as exc:
-            say(f"❌ 打开浏览器失败：{exc}")
+            say(t(f"❌ 打开浏览器失败：{exc}", f"❌ Failed to open the browser: {exc}"))
         except WebDriverException as exc:
-            say(f"❌ 浏览器崩溃：{str(exc).splitlines()[0][:160]}")
+            say(t(f"❌ 浏览器崩溃：{str(exc).splitlines()[0][:160]}",
+                  f"❌ Browser crashed: {str(exc).splitlines()[0][:160]}"))
             _close_current()
         finally:
             _variant = saved_variant

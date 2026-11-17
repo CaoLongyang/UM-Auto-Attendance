@@ -225,3 +225,6 @@ signed.json
 logs/
 tmp/
 *.log
+
+# PyInstaller 打包配置要跟着源码走（上面的 *.spec 会误伤它）
+!gui.spec
